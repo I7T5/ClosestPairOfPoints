@@ -121,7 +121,7 @@ def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
     from openpyxl import Workbook # run `pip install openpyxl` in this directory in your console/terminal to get the module
     from openpyxl.styles import Font, PatternFill, Alignment
     
-    test_sizes = [1, 100, 200, 300, 400, 500]
+    test_sizes = [1, 200, 400, 600, 800, 1000]
     num_trials = 10
     
     # Store results
