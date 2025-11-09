@@ -111,7 +111,7 @@ def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
     """Collect timing data for both algorithms and save to Excel file.
     
     Tests both brute force and divide-and-conquer algorithms with input sizes
-    n = 1, 10, 50, 100, 250, 500, running 10 trials for each size.
+    n = 1, 200, 400, 600, 800, 1000, running 10 trials for each size.
     
     Arguments
     ---------
@@ -256,8 +256,48 @@ def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
 
 def main(args: argparse.Namespace) -> None: 
     """Test the closest pair algorithms. 
+     
+    This function runs both the brute force and divide-and-conquer algorithms
+    on randomly generated points and displays the results and timing information.
     
-    Pass `--num-points [NUMBER] or -np [NUMBER]` to specify the number of points to generate.
+    Usage Examples
+    --------------
+    Run with default 5000 points:
+        python closest_pair.py
+    
+    Run with custom number of points:
+        python closest_pair.py --num-points 1000
+        python closest_pair.py -np 1000
+    
+    Collect comprehensive timing data for analysis (runs multiple trials):
+        python closest_pair.py --collect-data
+        python closest_pair.py -cd
+    
+    Collect timing data with custom output filename:
+        python closest_pair.py --collect-data --output-file my_results.xlsx
+        python closest_pair.py -cd -o my_results.xlsx
+    
+    Arguments
+    ---------
+    args : argparse.Namespace
+        Command-line arguments containing:
+        - num_points (int): Number of random points to generate (default: 5000)
+        - collect_data (bool): If True, runs comprehensive timing analysis
+        - output_file (str): Excel filename for timing results (default: timing_results.xlsx)
+    
+    Output
+    ------
+    Prints to console:
+        - The closest pair of points found by each algorithm
+        - The minimum distance between the closest pair
+        - Runtime for each algorithm in seconds
+    
+    Notes
+    -----
+        - Points are randomly generated with x,y coordinates in range [-100, 100]
+        - For comprehensive performance analysis, use --collect-data flag instead
+        - The collect_data mode runs 10 trials each for n = 1, 10, 50, 100, 250, 500
+            and saves results to an Excel file with statistical analysis
     """
 
     num_points: int = args.num_points
