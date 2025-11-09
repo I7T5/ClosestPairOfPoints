@@ -115,7 +115,7 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
     return divide_in_half(sorted_by_x)
 
 
-def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
+def main(output_file: str) -> None:
     """Collect timing data for both algorithms and save to Excel file.
     
     Tests both brute force and divide-and-conquer algorithms with input sizes
@@ -125,6 +125,15 @@ def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
     ---------
         output_file: str
             The name of the Excel file to save results to.
+    
+    Usage Examples
+    --------------
+    Run with default collect comprehensive timing data for analysis (runs multiple trials):
+        python algorithm.py
+    
+    Collect timing data with custom output filename:
+        python algorithm.py --collect-data --output-file my_results.xlsx
+        python algorithm.py -cd -o my_results.xlsx
     """
     from openpyxl import Workbook # run `pip install openpyxl` in this directory in your console/terminal to get the module
     from openpyxl.styles import Font, PatternFill, Alignment
@@ -262,85 +271,15 @@ def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
     print(f"  Total tests run: {len(test_sizes) * num_trials * 2}")
 
 
-def main(args: argparse.Namespace) -> None: 
-    """Test the closest pair algorithms. 
-     
-    This function runs both the brute force and divide-and-conquer algorithms
-    on randomly generated points and displays the results and timing information.
-    
-    Usage Examples
-    --------------
-    Run with default 5000 points:
-        python closest_pair.py
-    
-    Run with custom number of points:
-        python closest_pair.py --num-points 1000
-        python closest_pair.py -np 1000
-    
-    Collect comprehensive timing data for analysis (runs multiple trials):
-        python closest_pair.py --collect-data
-        python closest_pair.py -cd
-    
-    Collect timing data with custom output filename:
-        python closest_pair.py --collect-data --output-file my_results.xlsx
-        python closest_pair.py -cd -o my_results.xlsx
-    
-    Arguments
-    ---------
-    args : argparse.Namespace
-        Command-line arguments containing:
-        - num_points (int): Number of random points to generate (default: 5000)
-        - collect_data (bool): If True, runs comprehensive timing analysis
-        - output_file (str): Excel filename for timing results (default: timing_results.xlsx)
-    
-    Output
-    ------
-    Prints to console:
-        - The closest pair of points found by each algorithm
-        - The minimum distance between the closest pair
-        - Runtime for each algorithm in seconds
-    
-    Notes
-    -----
-        - Points are randomly generated with x,y coordinates in range [-100, 100]
-        - For comprehensive performance analysis, use --collect-data flag instead
-        - The collect_data mode runs 10 trials each for n = 1, 10, 50, 100, 250, 500
-            and saves results to an Excel file with statistical analysis
-    """
-
-    num_points: int = args.num_points
-
-    # Bulk generate sample points using numpy
-    coords = np.random.uniform(-100, 100, num_points * 2)  # generate num_points*2 numbers each with value between -100 and 100
-    points = coords.reshape((num_points, 2))            # reshape to (num_points, 2)             
-
-    # Test
-    brute_start = time()
-    print(f"Testing brute-force algorithm with {num_points} points...")
-    brute_closest, brute_distance = brute_force(points)
-    brute_time = time() - brute_start
-    brute_closest_str: str = [f"({brute_closest[i][0]:.2f}, {brute_closest[i][1]:.2f})" for i in range(2)]
-    print(f"Brute-force closest points found are {brute_closest_str} with minimum distance {brute_distance:.6f}")
-    print(f"Brute-force time taken: {brute_time:.4f} seconds\n")
-
-    dnc_start = time()
-    print(f"Testing optimized algorithm with {num_points} points...")
-    dnc_closest, dnc_distance = divide_and_conquer(points)
-    dnc_time = time() - dnc_start
-    dnc_closest_str: str = [f"({dnc_closest[i][0]:.2f}, {dnc_closest[i][1]:.2f})" for i in range(2)]
-    print(f"Optimized algorithm closest points found are {dnc_closest_str} with minimum distance {dnc_distance:.6f}")
-    print(f"Optimized algorithm time taken: {dnc_time:.4f} seconds\n")
-
-
 if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Closest pair of points algorithms.")
-    parser.add_argument("--num-points", "-np", type=int, help="number of points", default=5000)
-    parser.add_argument("--collect-data", "-cd", action="store_true", help="collect timing data and save to Excel")
+
+    # Deprecated options commented out
+    # parser.add_argument("--num-points", "-np", type=int, help="number of points", default=5000)
+    # parser.add_argument("--collect-data", "-cd", action="store_true", help="collect timing data and save to Excel")
+
     parser.add_argument("--output-file", "-o", type=str, default="timing_results.xlsx", help="output Excel file name")
     args = parser.parse_args()
     
-    if args.collect_data:
-        collect_timing_data(args.output_file)
-    else:
-        main(args)
+    main(args.output_file)
