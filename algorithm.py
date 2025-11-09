@@ -1,8 +1,15 @@
+# usr/bin/env python3
+"""
+Prerequisite: `pip install numpy` in this directory in your console/terminal if you don't have it already.
+Run `python3 algorithm.py` to test the closest pair algorithms implemented below.
+"""
+
 __author__ = "Alex Bennet, Ella Kocher, Yina Tang"
 __description__ = "Implementation of closest pair algorithms. (Project 1 for COMP 422, Fall 2025)"
 
 import argparse
 from time import time
+from math import isclose
 import numpy as np  # run `pip install numpy` in this directory in your console/terminal if you don't have it already
 from numpy.typing import NDArray
 
@@ -63,46 +70,47 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
     sorted_by_x = points[points[:, 0].argsort()]
 
     # 2. Recursively divide the set of points into two halves
-    def divide_in_half(pts: NDArray) -> float:
+    def divide_in_half(A: NDArray) -> tuple[tuple[float], float]:
         # Base cases
-        if len(pts) == 1:
-            return (([0, 0], [0, 0]), float('inf'))
-        elif len(pts) == 2:
-            return (pts.tolist(), np.linalg.norm(pts[0] - pts[1]))
+        if len(A) <= 1:
+            return (([float('-inf'), float('-inf')], [float('inf'), float('inf')]), float('inf'))
+        elif len(A) == 2:
+            return (A.tolist(), float(np.linalg.norm(A[0] - A[1])))
         
         # Recursive case
-        mid = len(pts) // 2
-        pts_left, d_left = divide_in_half(pts[:mid])
-        pts_right, d_right = divide_in_half(pts[mid:])
+        mid_i = len(A) // 2
+        cp_left, d_left = divide_in_half(A[:mid_i])
+        cp_right, d_right = divide_in_half(A[mid_i:])
 
         # 3. Find the closest pair in each half
         if d_left < d_right:
-            closest_pair = pts_left
-            min_distance = d_left
+            cp = cp_left
+            d = d_left
         else:
-            closest_pair = pts_right
-            min_distance = d_right
+            cp = cp_right
+            d = d_right
 
         # Build a strip: Collect points whose x-distance from the midline is ≤ d.
-        y_coord_strip = pts[np.abs(pts[:, 0] - pts[mid, 0]) <= min_distance]
+        y_coord_strip = A[np.abs(A[:, 0] - A[mid_i, 0]) <= d]
 
         # Sort the strip points by y-coordinate
         sorted_by_y = y_coord_strip[y_coord_strip[:, 1].argsort()]
 
         # 4. Find the closest pair across the dividing line
         # For each point in the strip, compare it with the next up to 7 points (having y-distance ≤ d) to check for closer pairs.
-        # NOTE: I (Ina) do not understand why it's 7 points specifically, but this is what the pseudocode says.
-        for i in range(len(sorted_by_y)-7):
-            for j in range(i+1, i+8):
-                if (sorted_by_y[j][1] - sorted_by_y[i][1]) > min_distance:
+        for i in range(len(sorted_by_y)):
+            stop = min(i + 8, len(sorted_by_y))
+            for j in range(i+1, stop):
+                if (sorted_by_y[j][1] - sorted_by_y[i][1]) > d:
                     break
+
                 dist = np.linalg.norm(sorted_by_y[i] - sorted_by_y[j])
-                if dist < min_distance:
-                    min_distance = dist
-                    closest_pair = (sorted_by_y[i].tolist(), sorted_by_y[j].tolist())
+                if dist < d:
+                    d = dist
+                    cp = (sorted_by_y[i].tolist(), sorted_by_y[j].tolist())
 
         # 5. Return the overall closest pair
-        return closest_pair, min_distance
+        return cp, float(d)
 
     return divide_in_half(sorted_by_x)
 
@@ -110,36 +118,57 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
 def main(args: argparse.Namespace) -> None: 
     """Test the closest pair algorithms. 
     
-    Pass `--num-points [NUMBER] or -np [NUMBER]` to specify the number of points to generate.
+    Pass `--num-points [NUMBER] ... or -np [NUMBER] [NUMBER] ...` to specify the number of points to generate.
     """
 
-    num_points: int = args.num_points
+    print("+-------------------------------------------+")
+    print("| Closest Pair Algorithms Performance Test* |")
+    print("+-------------------------------------------+")
+    print("*This will run both the brute-force and divide-and-conquer algorithms on random points and compare their execution times.")
+    print("*It will also verify that both algorithms return the same pair of points by comparing the minimum distances.\n")
+    print("Test sizes (number of points):", args.num_points)
 
-    # Bulk generate sample points using numpy
-    coords = np.random.uniform(-100, 100, num_points * 2)  # generate num_points*2 numbers each with value between -100 and 100
-    points = coords.reshape((num_points, 2))            # reshape to (num_points, 2)             
+    sizes: list[int] = args.num_points
 
-    # Test
-    brute_start = time()
-    print(f"Testing brute-force algorithm with {num_points} points...")
-    brute_closest, brute_distance = brute_force(points)
-    brute_time = time() - brute_start
-    brute_closest_str: str = [f"({brute_closest[i][0]:.2f}, {brute_closest[i][1]:.2f})" for i in range(2)]
-    print(f"Brute-force closest points found are {brute_closest_str} with minimum distance {brute_distance:.6f}")
-    print(f"Brute-force time taken: {brute_time:.4f} seconds\n")
+    bf_results = []
+    dc_results = []
+    bf_times = []
+    dc_times = []
 
-    dnc_start = time()
-    print(f"Testing optimized algorithm with {num_points} points...")
-    dnc_closest, dnc_distance = divide_and_conquer(points)
-    dnc_time = time() - dnc_start
-    dnc_closest_str: str = [f"({dnc_closest[i][0]:.2f}, {dnc_closest[i][1]:.2f})" for i in range(2)]
-    print(f"Optimized algorithm closest points found are {dnc_closest_str} with minimum distance {dnc_distance:.6f}")
-    print(f"Optimized algorithm time taken: {dnc_time:.4f} seconds\n")
+    for size in sizes:
+        print(f"Running algorithms for {size} points...")
+        points = np.random.rand(size, 2) * 1000  # Generate random points in 2D space
+
+        start_time = time()
+        bf_result = brute_force(points)
+        bf_results.append(bf_result)
+        bf_times.append(time() - start_time)
+
+        start_time = time()
+        dc_result = divide_and_conquer(points)
+        dc_results.append(dc_result)
+        dc_times.append(time() - start_time)
+
+        # print(f"Brute Force Result: {bf_result}, Time Taken: {bf_times[-1]:.6f} seconds")
+        # print(f"Divide & Conquer Result: {dnc_result}, Time Taken: {dc_times[-1]:.6f} seconds")
+
+        assert isclose(bf_result[1], dc_result[1]), "Results from both algorithms do not match!"
+    
+    print("""
++------------------------+------------------------+---------------------------+----------------------+---------------------------+
+| Number of Points       | Brute Force Distance   | Divide & Conquer Distance | Brute Force Time (s) | Divide & Conquer Time (s) |
++------------------------+------------------------+---------------------------+----------------------+---------------------------+""")
+    for size, bf_result, dc_result, bf_time, dc_time in zip(sizes, bf_results, dc_results, bf_times, dc_times):
+        print(f"| {size:<22} | {bf_result[1]:<22.6f} | {dc_result[1]:<25.6f} | {bf_time:<20.6f} | {dc_time:<25.6f} |")
+        print("+------------------------+------------------------+---------------------------+----------------------+---------------------------+")
+
 
 
 if __name__ == "__main__":
     # Parse command-line arguments for number of points
     parser = argparse.ArgumentParser(description="A simple greeting script.")
-    parser.add_argument("--num-points", "-np", type=int, help="number of points", default="5000")
+    parser.add_argument("--num-points", "-np", type=int, nargs="*", default=[10, 50, 100, 500, 1000, 5000, 10000], 
+                        metavar="NUMBER",
+                        help="Number of points to generate for testing the closest pair algorithms. Enter multiple values separated by spaces to test different sizes. Default: [10, 50, 100, 500, 1000, 5000, 10000]")
     args = parser.parse_args()
     main(args)
