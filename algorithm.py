@@ -1,8 +1,15 @@
+# usr/bin/env python3
+"""
+Prerequisite: `pip install numpy` in this directory in your console/terminal if you don't have it already.
+Run `python3 algorithm.py` to test the closest pair algorithms implemented below.
+"""
+
 __author__ = "Alex Bennet, Ella Kocher, Yina Tang"
 __description__ = "Implementation of closest pair algorithms. (Project 1 for COMP 422, Fall 2025)"
 
 import argparse
 from time import time
+from math import isclose
 import numpy as np  # run `pip install numpy` in this directory in your console/terminal if you don't have it already
 from numpy.typing import NDArray
 
@@ -63,46 +70,47 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
     sorted_by_x = points[points[:, 0].argsort()]
 
     # 2. Recursively divide the set of points into two halves
-    def divide_in_half(pts: NDArray) -> float:
+    def divide_in_half(A: NDArray) -> tuple[tuple[float], float]:
         # Base cases
-        if len(pts) == 1:
-            return (([0, 0], [0, 0]), float('inf'))
-        elif len(pts) == 2:
-            return (pts.tolist(), np.linalg.norm(pts[0] - pts[1]))
+        if len(A) <= 1:
+            return (([float('-inf'), float('-inf')], [float('inf'), float('inf')]), float('inf'))
+        elif len(A) == 2:
+            return (A.tolist(), float(np.linalg.norm(A[0] - A[1])))
         
         # Recursive case
-        mid = len(pts) // 2
-        pts_left, d_left = divide_in_half(pts[:mid])
-        pts_right, d_right = divide_in_half(pts[mid:])
+        mid_i = len(A) // 2
+        cp_left, d_left = divide_in_half(A[:mid_i])
+        cp_right, d_right = divide_in_half(A[mid_i:])
 
         # 3. Find the closest pair in each half
         if d_left < d_right:
-            closest_pair = pts_left
-            min_distance = d_left
+            cp = cp_left
+            d = d_left
         else:
-            closest_pair = pts_right
-            min_distance = d_right
+            cp = cp_right
+            d = d_right
 
         # Build a strip: Collect points whose x-distance from the midline is ≤ d.
-        y_coord_strip = pts[np.abs(pts[:, 0] - pts[mid, 0]) <= min_distance]
+        y_coord_strip = A[np.abs(A[:, 0] - A[mid_i, 0]) <= d]
 
         # Sort the strip points by y-coordinate
         sorted_by_y = y_coord_strip[y_coord_strip[:, 1].argsort()]
 
         # 4. Find the closest pair across the dividing line
         # For each point in the strip, compare it with the next up to 7 points (having y-distance ≤ d) to check for closer pairs.
-        # NOTE: I (Ina) do not understand why it's 7 points specifically, but this is what the pseudocode says.
-        for i in range(len(sorted_by_y)-7):
-            for j in range(i+1, i+8):
-                if (sorted_by_y[j][1] - sorted_by_y[i][1]) > min_distance:
+        for i in range(len(sorted_by_y)):
+            stop = min(i + 8, len(sorted_by_y))
+            for j in range(i+1, stop):
+                if (sorted_by_y[j][1] - sorted_by_y[i][1]) > d:
                     break
+
                 dist = np.linalg.norm(sorted_by_y[i] - sorted_by_y[j])
-                if dist < min_distance:
-                    min_distance = dist
-                    closest_pair = (sorted_by_y[i].tolist(), sorted_by_y[j].tolist())
+                if dist < d:
+                    d = dist
+                    cp = (sorted_by_y[i].tolist(), sorted_by_y[j].tolist())
 
         # 5. Return the overall closest pair
-        return closest_pair, min_distance
+        return cp, float(d)
 
     return divide_in_half(sorted_by_x)
 

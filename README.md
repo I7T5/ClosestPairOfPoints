@@ -92,7 +92,7 @@ To create performance visualization plots:
 
 1. Install additional packages:
 ```bash
-pip install matplotlib scipy
+pip install matplotlib scipy pandas
 ```
 
 2. Run the plot generator:
