@@ -107,6 +107,153 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
     return divide_in_half(sorted_by_x)
 
 
+def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
+    """Collect timing data for both algorithms and save to Excel file.
+    
+    Tests both brute force and divide-and-conquer algorithms with input sizes
+    n = 1, 10, 50, 100, 250, 500, running 10 trials for each size.
+    
+    Arguments
+    ---------
+        output_file: str
+            The name of the Excel file to save results to.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    
+    test_sizes = [1, 10, 50, 100, 250, 500]
+    num_trials = 10
+    
+    # Store results
+    brute_force_times = {n: [] for n in test_sizes}
+    divide_conquer_times = {n: [] for n in test_sizes}
+    
+    print("Collecting timing data...")
+    
+    for n in test_sizes:
+        print(f"\nTesting with n={n} points...")
+        
+        for trial in range(num_trials):
+            # Generate random points
+            coords = np.random.uniform(-100, 100, n * 2)
+            points = coords.reshape((n, 2))
+            
+            # Time brute force
+            start = time()
+            brute_force(points)
+            bf_time = time() - start
+            brute_force_times[n].append(bf_time)
+            
+            # Time divide and conquer
+            start = time()
+            divide_and_conquer(points)
+            dc_time = time() - start
+            divide_conquer_times[n].append(dc_time)
+            
+            print(f"  Trial {trial + 1}/10: BF={bf_time:.6f}s, D&C={dc_time:.6f}s")
+    
+    print(f"\nSaving results to {output_file}...")
+    
+    # Create Excel workbook
+    wb = Workbook()
+    
+    # Sheet 1: Brute Force Data
+    bf_sheet = wb.active
+    bf_sheet.title = "Brute Force"
+    
+    # Headers
+    bf_sheet['A1'] = 'Input Size (n)'
+    bf_sheet['A1'].font = Font(bold=True)
+    for i in range(num_trials):
+        bf_sheet.cell(1, i + 2, f'Trial {i + 1}')
+        bf_sheet.cell(1, i + 2).font = Font(bold=True)
+    bf_sheet.cell(1, num_trials + 2, 'Mean')
+    bf_sheet.cell(1, num_trials + 2).font = Font(bold=True, color='0000FF')
+    bf_sheet.cell(1, num_trials + 3, 'Std Dev')
+    bf_sheet.cell(1, num_trials + 3).font = Font(bold=True, color='0000FF')
+    
+    # Data
+    for idx, n in enumerate(test_sizes, start=2):
+        bf_sheet.cell(idx, 1, n)
+        for trial_idx, time_val in enumerate(brute_force_times[n], start=2):
+            bf_sheet.cell(idx, trial_idx, time_val)
+        
+        # Formulas for mean and std dev
+        bf_sheet.cell(idx, num_trials + 2, f'=AVERAGE(B{idx}:{chr(65 + num_trials)}{idx})')
+        bf_sheet.cell(idx, num_trials + 3, f'=STDEV.S(B{idx}:{chr(65 + num_trials)}{idx})')
+    
+    # Formatting
+    bf_sheet.column_dimensions['A'].width = 15
+    for col in range(2, num_trials + 4):
+        bf_sheet.column_dimensions[chr(64 + col)].width = 12
+    
+    # Sheet 2: Divide and Conquer Data
+    dc_sheet = wb.create_sheet("Divide and Conquer")
+    
+    # Headers
+    dc_sheet['A1'] = 'Input Size (n)'
+    dc_sheet['A1'].font = Font(bold=True)
+    for i in range(num_trials):
+        dc_sheet.cell(1, i + 2, f'Trial {i + 1}')
+        dc_sheet.cell(1, i + 2).font = Font(bold=True)
+    dc_sheet.cell(1, num_trials + 2, 'Mean')
+    dc_sheet.cell(1, num_trials + 2).font = Font(bold=True, color='0000FF')
+    dc_sheet.cell(1, num_trials + 3, 'Std Dev')
+    dc_sheet.cell(1, num_trials + 3).font = Font(bold=True, color='0000FF')
+    
+    # Data
+    for idx, n in enumerate(test_sizes, start=2):
+        dc_sheet.cell(idx, 1, n)
+        for trial_idx, time_val in enumerate(divide_conquer_times[n], start=2):
+            dc_sheet.cell(idx, trial_idx, time_val)
+        
+        # Formulas for mean and std dev
+        dc_sheet.cell(idx, num_trials + 2, f'=AVERAGE(B{idx}:{chr(65 + num_trials)}{idx})')
+        dc_sheet.cell(idx, num_trials + 3, f'=STDEV.S(B{idx}:{chr(65 + num_trials)}{idx})')
+    
+    # Formatting
+    dc_sheet.column_dimensions['A'].width = 15
+    for col in range(2, num_trials + 4):
+        dc_sheet.column_dimensions[chr(64 + col)].width = 12
+    
+    # Sheet 3: Summary
+    summary_sheet = wb.create_sheet("Summary")
+    
+    # Headers
+    summary_sheet['A1'] = 'Input Size (n)'
+    summary_sheet['B1'] = 'Brute Force Mean (s)'
+    summary_sheet['C1'] = 'Brute Force Std Dev (s)'
+    summary_sheet['D1'] = 'D&C Mean (s)'
+    summary_sheet['E1'] = 'D&C Std Dev (s)'
+    summary_sheet['F1'] = 'Speedup Factor'
+    
+    for cell in ['A1', 'B1', 'C1', 'D1', 'E1', 'F1']:
+        summary_sheet[cell].font = Font(bold=True)
+        summary_sheet[cell].fill = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')
+    
+    # Data with formulas referencing other sheets
+    for idx, n in enumerate(test_sizes, start=2):
+        summary_sheet.cell(idx, 1, n)
+        summary_sheet.cell(idx, 2, f"='Brute Force'!L{idx}")
+        summary_sheet.cell(idx, 3, f"='Brute Force'!M{idx}")
+        summary_sheet.cell(idx, 4, f"='Divide and Conquer'!L{idx}")
+        summary_sheet.cell(idx, 5, f"='Divide and Conquer'!M{idx}")
+        summary_sheet.cell(idx, 6, f"=B{idx}/D{idx}")
+    
+    # Formatting
+    summary_sheet.column_dimensions['A'].width = 15
+    for col in ['B', 'C', 'D', 'E', 'F']:
+        summary_sheet.column_dimensions[col].width = 20
+    
+    # Save workbook
+    wb.save(output_file)
+    print(f"Results saved successfully to {output_file}")
+    print("\nSummary:")
+    print(f"  Test sizes: {test_sizes}")
+    print(f"  Trials per size: {num_trials}")
+    print(f"  Total tests run: {len(test_sizes) * num_trials * 2}")
+
+
 def main(args: argparse.Namespace) -> None: 
     """Test the closest pair algorithms. 
     
@@ -138,8 +285,14 @@ def main(args: argparse.Namespace) -> None:
 
 
 if __name__ == "__main__":
-    # Parse command-line arguments for number of points
-    parser = argparse.ArgumentParser(description="A simple greeting script.")
-    parser.add_argument("--num-points", "-np", type=int, help="number of points", default="5000")
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Closest pair of points algorithms.")
+    parser.add_argument("--num-points", "-np", type=int, help="number of points", default=5000)
+    parser.add_argument("--collect-data", "-cd", action="store_true", help="collect timing data and save to Excel")
+    parser.add_argument("--output-file", "-o", type=str, default="timing_results.xlsx", help="output Excel file name")
     args = parser.parse_args()
-    main(args)
+    
+    if args.collect_data:
+        collect_timing_data(args.output_file)
+    else:
+        main(args)
