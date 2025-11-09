@@ -118,7 +118,7 @@ def collect_timing_data(output_file: str = "timing_results.xlsx") -> None:
         output_file: str
             The name of the Excel file to save results to.
     """
-    from openpyxl import Workbook
+    from openpyxl import Workbook # run `pip install openpyxl` in this directory in your console/terminal to get the module
     from openpyxl.styles import Font, PatternFill, Alignment
     
     test_sizes = [1, 10, 50, 100, 250, 500]
