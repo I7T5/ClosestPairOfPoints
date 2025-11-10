@@ -59,7 +59,7 @@ plt.savefig('brute_force_plot.png', dpi=300, bbox_inches='tight')
 print("✓ Saved: brute_force_plot.png")
 
 # ============================================================================
-# PLOT 2: Divide and Conquer Algorithm with n(log n)² trendline
+# PLOT 2: Divide and Conquer Algorithm
 # ============================================================================
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 
@@ -72,16 +72,14 @@ for i in range(1, 11):
 ax2.plot(n_values, dc_means, 'o-', color='darkorange', linewidth=3, 
          markersize=10, label='Average Time', zorder=5)
 
-# Fit n(log n)² trendline
-def nlogn_squared(n, a, b):
-    """Model: a * n * (log n)² + b"""
-    return a * n * (np.log(n) ** 2) + b
+# Fit n log n trendline
+def nlogn(n, a, b):
+    return a * n * np.log(n) + b
 
-# Fit using points with n > 1 (to avoid log(1) = 0)
-popt, _ = curve_fit(nlogn_squared, n_values[1:], dc_means[1:])
-nlogn2_fit = nlogn_squared(n_fit, *popt)
-ax2.plot(n_fit, nlogn2_fit, '--', color='cornflowerblue', linewidth=2.5, 
-         label='n (log n)² trendline', zorder=4)
+popt, _ = curve_fit(nlogn, n_values[1:], dc_means[1:])  # Skip n=1
+nlogn_fit = nlogn(n_fit, *popt)
+ax2.plot(n_fit, nlogn_fit, '--', color='cornflowerblue', linewidth=2.5, 
+         label='n log n trendline', zorder=4)
 
 ax2.set_xlabel('Number of Points (n)', fontsize=13, fontweight='bold')
 ax2.set_ylabel('Runtime (milliseconds)', fontsize=13, fontweight='bold')
@@ -152,7 +150,7 @@ print("✓ Saved: speedup_plot.png")
 print("\n" + "="*60)
 print("SUCCESS! All plots created:")
 print("  1. brute_force_plot.png")
-print("  2. divide_conquer_plot.png (with n(log n)² trendline)")
+print("  2. divide_conquer_plot.png")
 print("  3. comparison_plot.png")
 print("  4. speedup_plot.png")
 print("="*60)
@@ -162,7 +160,3 @@ print("\nKEY STATISTICS:")
 print(f"  Speedup at n=500: {speedup[-1]:.1f}x faster")
 print(f"  BF runtime at n=500: {bf_means[-1]:.2f} milliseconds")
 print(f"  D&C runtime at n=500: {dc_means[-1]:.4f} milliseconds")
-
-# Print fitted parameters for n(log n)²
-print(f"\nFITTED n(log n)² MODEL:")
-print(f"  f(n) = {popt[0]:.6f} * n * (log n)² + {popt[1]:.6f}")
