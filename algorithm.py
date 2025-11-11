@@ -20,12 +20,12 @@ def brute_force(points: NDArray) -> tuple[tuple[tuple[float, float]], float]:
     Arguments
     ---------
         points: NDArray
-            An array of shape (n, d) where n is the number of points and d is the dimension.
+            An array of shape (n, 2) where n is the number of points and 2 is the dimension.
 
     Returns
     -------
         closest_points: tuple[tuple[float, float]])
-            An array of shape (2, d), i.e., the pair of points with the minimum distance.
+            An array of shape (2, 2), i.e., the pair of points with the minimum distance.
         min_dist: float
             The minimum distance between the closest pair of points.
     """
@@ -43,13 +43,13 @@ def brute_force(points: NDArray) -> tuple[tuple[tuple[float, float]], float]:
     return closest_points, min_dist
 
 
-def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], float]:
+def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float]], float]:
     """Compute the minimum distance between points using an optimized approach. Referenced the pseudocode from [GeeksForGeeks](https://www.geeksforgeeks.org/dsa/closest-pair-of-points-using-divide-and-conquer-algorithm/). 
 
     Arguments
     ---------
         points: NDArray
-            An array of shape (n, d) where n is the number of points and d is the dimension.
+            An array of shape (n, 2) where n is the number of points and 2 is the dimension.
 
     Returns
     -------
@@ -66,11 +66,22 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
     # 4. Find the closest pair across the dividing line
     # 5. Return the overall closest pair
 
-    # 1. Sort points by x-coordinate
-    sorted_by_x = points[points[:, 0].argsort()]
+    def recurse(A: NDArray, A_y: NDArray) -> tuple[tuple[tuple[float]], float]:
+        """Main recursive function for divide and conquer approach.
 
-    # 2. Recursively divide the set of points into two halves
-    def divide_in_half(A: NDArray) -> tuple[tuple[float], float]:
+        Parameters
+        ----------
+        A : NDArray
+            NDArray of size n times 2 points (tuple of two floats) in 2D sorted by x-coordinate
+        A_y : NDArray
+            NDArray of size n times 2 points (tuple of two floats) in 2D sorted by y-coordinate
+
+        Returns
+        -------
+        tuple[tuple[tuple[float]], float]
+            tuple[tuple[float]]: Closest pair of points. A pair of tuples, each with of two floats
+            float: Distance between the closest pair of points
+        """
         # Base cases
         if len(A) <= 1:
             return (([float('-inf'), float('-inf')], [float('inf'), float('inf')]), float('inf'))
@@ -78,9 +89,28 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
             return (A.tolist(), float(np.linalg.norm(A[0] - A[1])))
         
         # Recursive case
+        # Find the midpoint i.e. pivot
         mid_i = len(A) // 2
-        cp_left, d_left = divide_in_half(A[:mid_i])
-        cp_right, d_right = divide_in_half(A[mid_i:])
+
+        # Divide A_y into left and right halves by x-coordinate, preserving the y-ordering
+        A_y_left = []
+        A_y_right = []
+        for i in range(len(A_y)):
+            point = A_y[i]
+            if point[0] <= A[mid_i-1, 0]:
+                A_y_left.append(point)
+            else:
+                A_y_right.append(point)
+            
+            # Stop once we've filled the left half; ensures |A| == |A_y|
+            if len(A_y_left) == mid_i:
+                if (i+1) < (len(A_y)-1):
+                    A_y_right.extend(A_y[i+1:])
+                break
+
+        # 2. Recursively divide the set of points into two halves
+        cp_left, d_left = recurse(A[:mid_i], A_y_left)
+        cp_right, d_right = recurse(A[mid_i:], A_y_right)
 
         # 3. Find the closest pair in each half
         if d_left < d_right:
@@ -90,36 +120,42 @@ def divide_and_conquer(points: NDArray) -> tuple[tuple[tuple[float, float]], flo
             cp = cp_right
             d = d_right
 
-        # Build a strip: Collect points whose x-distance from the midline is ≤ d.
-        y_coord_strip = A[np.abs(A[:, 0] - A[mid_i, 0]) <= d]
-
-        # Sort the strip points by y-coordinate
-        sorted_by_y = y_coord_strip[y_coord_strip[:, 1].argsort()]
-
         # 4. Find the closest pair across the dividing line
+        # Collect points whose x-distance from the midline is ≤ d. Call this the "strip."
+        # Collect points one-by-one from A_y so the strip is sorted by y-coordinate
+        strip = []
+        for points in A_y:
+            if abs(points[0] - A[mid_i][0]) <= d:
+                strip.append(points)
+
         # For each point in the strip, compare it with the next up to 7 points (having y-distance ≤ d) to check for closer pairs.
-        for i in range(len(sorted_by_y)):
-            stop = min(i + 8, len(sorted_by_y))
+        for i in range(len(strip)):
+            stop = min(i + 8, len(strip))
             for j in range(i+1, stop):
-                if (sorted_by_y[j][1] - sorted_by_y[i][1]) > d:
+                if (strip[j][1] - strip[i][1]) > d:
                     break
 
-                dist = np.linalg.norm(sorted_by_y[i] - sorted_by_y[j])
+                dist = np.linalg.norm(strip[i] - strip[j])
                 if dist < d:
+                    cp = (strip[i].tolist(), strip[j].tolist())
                     d = dist
-                    cp = (sorted_by_y[i].tolist(), sorted_by_y[j].tolist())
 
         # 5. Return the overall closest pair
         return cp, float(d)
 
-    return divide_in_half(sorted_by_x)
+    # 1. Sort points by x-coordinate and y-coordinate, respectively
+    A = points[points[:, 0].argsort()]
+    A_y = points[points[:, 1].argsort()]
+
+    # 2. Recursively divide the set of points into two halves
+    return recurse(A, A_y)
 
 
 def main(output_file: str) -> None:
     """Collect timing data for both algorithms and save to Excel file.
     
     Tests both brute force and divide-and-conquer algorithms with input sizes
-    n = 1, 200, 400, 600, 800, 1000, running 10 trials for each size.
+    n = 1, 50, 100, 200, 400, 800, 1500, 2000, 3000, running 10 trials for each size.
     
     Arguments
     ---------
@@ -138,7 +174,7 @@ def main(output_file: str) -> None:
     from openpyxl import Workbook # run `pip install openpyxl` in this directory in your console/terminal to get the module
     from openpyxl.styles import Font, PatternFill, Alignment
     
-    test_sizes = [1, 200, 400, 600, 800, 1000]
+    test_sizes = [1, 50, 100, 200, 400, 800, 1500, 2000, 3000]
     num_trials = 10
     
     # Store results
